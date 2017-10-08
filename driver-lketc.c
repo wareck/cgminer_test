@@ -400,52 +400,6 @@ static bool lketc_initialize_cp2102(struct cgpu_info *lketc)
 	return true;
 }
 
-static bool lketc_initialize_ftdi(struct cgpu_info *lketc)
-{
-	int interface = usb_interface(lketc);
-
-	// Reset
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_RESET,
-		FTDI_VALUE_RESET, interface, C_RESET))
-		return false;
-
-	// Latency
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_LATENCY,
-		100, interface, C_LATENCY))
-		return false;
-
-	// Data
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_DATA,
-		FTDI_VALUE_DATA_LKE, interface, C_SETDATA))
-		return false;
-
-	// Baudrate
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_BAUD,
-		FTDI_VALUE_BAUD_LKE, (FTDI_INDEX_BAUD_LKE & 0xff00) | interface, C_SETBAUD))
-		return false;
-
-	// Modem control
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_MODEM,
-		FTDI_VALUE_MODEM, interface, C_SETMODEM))
-		return false;
-
-	// Flow control
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_FLOW,
-		FTDI_VALUE_FLOW, interface, C_SETFLOW))
-		return false;
-
-	// Clear buffers
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_RESET,
-		FTDI_VALUE_PURGE_TX, interface, C_PURGETX))
-		return false;
-
-	if (lketc_usb_control_transfer(lketc, FTDI_TYPE_OUT, FTDI_REQUEST_RESET,
-		FTDI_VALUE_PURGE_RX, interface, C_PURGERX))
-		return false;
-
-	return true;
-}
-
 static bool lketc_initialize_usb(struct cgpu_info *lketc)
 {
 	struct LKETC_INFO *info = lketc->device_data;
@@ -460,9 +414,6 @@ static bool lketc_initialize_usb(struct cgpu_info *lketc)
 	case IDENT_LKE:
 		info->read_data_offset = 0;
 		return lketc_initialize_cp2102(lketc);
-	case IDENT_LKE1:
-		info->read_data_offset = 2;		// FTDIRL adds 2 status bytes
-		return lketc_initialize_ftdi(lketc);
 	default:
 		applog(LOG_ERR, "lketc_initialize_usb called on wrong device, ident=%d", ident);
 		return false;
@@ -970,7 +921,6 @@ static int lketc_autoscan()
 	int found = 0;
 	applog(LOG_DEBUG, "lketc_autoscan() called");
 	found += serial_autodetect_udev(lketc_detect_one_serial, LKETC_USB_ID_MODEL_STR1);
-	found += serial_autodetect_udev(lketc_detect_one_serial, LKETC_USB_ID_MODEL_STR2);
 	return found;
 }
 
